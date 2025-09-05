@@ -16,6 +16,7 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.security.SecureRandom;
+import quangdev05.giftcode24.util.SchedulerCompat;
 
 public class GiftCodeManager {
 
@@ -118,14 +119,14 @@ public class GiftCodeManager {
         final List<ItemStack> items = gc.getItemRewards() != null ? new ArrayList<>(gc.getItemRewards()) : Collections.emptyList();
 
         // 1) Chạy command bằng GlobalRegionScheduler (chuẩn Folia cho console)
-        Bukkit.getGlobalRegionScheduler().execute(plugin, () -> {
+        SchedulerCompat.runConsole(plugin, () -> {
             for (String cmd : cmds) {
                 Bukkit.dispatchCommand(Bukkit.getConsoleSender(), cmd.replace("%player%", player.getName()));
             }
         });
 
         // 2) Phát item + gửi tin nhắn trên thread vùng của player
-        player.getScheduler().run(plugin, task -> {
+        SchedulerCompat.runAtPlayer(plugin, player, () -> {
             // Phát item
             if (!items.isEmpty()) {
                 for (ItemStack it : items) {
@@ -145,7 +146,7 @@ public class GiftCodeManager {
             for (String msg : msgs) {
                 player.sendMessage(ChatColor.GREEN + msg);
             }
-        }, null);
+        });
 
         // 3) Phản hồi admin
         sender.sendMessage(ChatColor.GREEN + "Assigned gift code " + ChatColor.YELLOW + code
@@ -325,14 +326,14 @@ public class GiftCodeManager {
         final List<ItemStack> items = giftCode.getItemRewards() != null ? new ArrayList<>(giftCode.getItemRewards()) : Collections.emptyList();
 
         // 1) Chạy command console trên Global thread (Folia bắt buộc)
-        Bukkit.getGlobalRegionScheduler().execute(plugin, () -> {
+        SchedulerCompat.runConsole(plugin, () -> {
             for (String cmd : cmds) {
                 Bukkit.dispatchCommand(Bukkit.getConsoleSender(), cmd.replace("%player%", player.getName()));
             }
         });
 
         // 2) Phát item + gửi tin nhắn + cập nhật save trên thread vùng của player
-        player.getScheduler().run(plugin, task -> {
+        SchedulerCompat.runAtPlayer(plugin, player, () -> {
             // Phát item
             if (!items.isEmpty()) {
                 for (ItemStack it : items) {
@@ -356,7 +357,7 @@ public class GiftCodeManager {
             giftCode.setMaxUses(giftCode.getMaxUses() - 1);
             addPlayerUsedCode(player, code);
             save(); // ghi YAML; nếu muốn không block thì chuyển sang AsyncScheduler
-        }, null);
+        });
 
         // 3) Trả thông điệp thành công ngay cho người gọi lệnh
         return ChatColor.GREEN + plugin.getConfig().getString("messages.code-redeemed", "You have successfully redeemed your gift code!");

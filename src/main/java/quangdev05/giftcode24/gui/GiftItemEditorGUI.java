@@ -12,6 +12,7 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import quangdev05.giftcode24.manager.GiftCodeManager;
+import quangdev05.giftcode24.util.SchedulerCompat;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -56,7 +57,7 @@ public class GiftItemEditorGUI implements Listener {
         String code = ChatColor.stripColor(title).replace("Edit items for ", "");
         Inventory inv = e.getInventory(); // giữ tham chiếu để xử lý trong region task
 
-        Bukkit.getRegionScheduler().run(plugin, player.getLocation(), task -> {
+        SchedulerCompat.runAtPlayer(plugin, player, () -> {
             List<ItemStack> items = new ArrayList<>();
             for (int i = 0; i < inv.getSize(); i++) {
                 ItemStack it = inv.getItem(i);
