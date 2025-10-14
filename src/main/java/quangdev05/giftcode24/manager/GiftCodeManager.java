@@ -11,6 +11,7 @@ import quangdev05.giftcode24.GiftCode24;
 import quangdev05.giftcode24.model.GiftCode;
 import quangdev05.giftcode24.storage.GiftCodesYml;
 import quangdev05.giftcode24.storage.PlayerDataYml;
+import quangdev05.giftcode24.storage.IpUsageYml;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -22,6 +23,7 @@ public class GiftCodeManager {
     private final GiftCode24 plugin;
     private final GiftCodesYml giftCodesYml;
     private final PlayerDataYml playerDataYml;
+    private final IpUsageYml ipUsageYml;
     private final Map<String, GiftCode> giftCodes;
     private static final String RANDOM_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ0123456789";
     private final SecureRandom rng = new SecureRandom();
@@ -32,10 +34,11 @@ public class GiftCodeManager {
         return sb.toString();
     }
 
-    public GiftCodeManager(GiftCode24 plugin, GiftCodesYml giftCodesYml, PlayerDataYml playerDataYml) {
+    public GiftCodeManager(GiftCode24 plugin, GiftCodesYml giftCodesYml, PlayerDataYml playerDataYml, IpUsageYml ipUsageYml) {
         this.plugin = plugin;
         this.giftCodesYml = giftCodesYml;
         this.playerDataYml = playerDataYml;
+        this.ipUsageYml = ipUsageYml;
         this.giftCodes = new LinkedHashMap<>(giftCodesYml.loadAll());
     }
 
@@ -300,16 +303,8 @@ public class GiftCodeManager {
 
         if (giftCode.getMaxUsesPerIP() > 0) {
             String playerIP = player.getAddress().getAddress().getHostAddress();
-            List<String> usedCodesByIP = new ArrayList<>();
-            if (playerDataYml.getPlayersSection() != null) {
-                for (String uuid : playerDataYml.getPlayersSection().getKeys(false)) {
-                    String ip = playerDataYml.getPlayersSection().getString(uuid + ".ip");
-                    if (playerIP.equals(ip)) {
-                        usedCodesByIP.addAll(playerDataYml.getPlayersSection().getStringList(uuid + ".usedCodes"));
-                    }
-                }
-            }
-            int ipUsageCount = Collections.frequency(usedCodesByIP, code);
+            // Sử dụng ipUsageYml thay vì cache trong GiftCode
+            int ipUsageCount = ipUsageYml.getIpUsageCount(code, playerIP);
             if (ipUsageCount >= giftCode.getMaxUsesPerIP()) {
                 return ChatColor.RED + plugin.getConfig().getString("messages.max-uses-perip", "This gift code has been used more times than allowed from your IP address.");
             }
@@ -333,6 +328,10 @@ public class GiftCodeManager {
 
         // 2) Phát item + gửi tin nhắn + cập nhật save trên thread vùng của player
         player.getScheduler().run(plugin, task -> {
+            if (giftCode.getMaxUsesPerIP() > 0) {
+                String playerIP = player.getAddress().getAddress().getHostAddress();
+                ipUsageYml.incrementIpUsage(code, playerIP);
+            }
             // Phát item
             if (!items.isEmpty()) {
                 for (ItemStack it : items) {
@@ -356,6 +355,7 @@ public class GiftCodeManager {
             giftCode.setMaxUses(giftCode.getMaxUses() - 1);
             addPlayerUsedCode(player, code);
             save(); // ghi YAML; nếu muốn không block thì chuyển sang AsyncScheduler
+            ipUsageYml.saveAll();
         }, null);
 
         // 3) Trả thông điệp thành công ngay cho người gọi lệnh

@@ -6,7 +6,7 @@
 
   <groupId>quangdev05</groupId>
   <artifactId>GiftCode24</artifactId>
-  <version>3.0.0</version>
+  <version>3.1.0-beta1</version>
   <packaging>jar</packaging>
 
   <name>GiftCode24</name>

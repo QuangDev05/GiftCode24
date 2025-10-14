@@ -53,14 +53,6 @@ public class GiftCodesYml {
                     playerMaxUses, maxUsesPerIP, requiredPlaytime, itemRewards);
 
             giftCode.setPermission(cfg.getString(key + ".permission", ""));
-
-            if (cfg.isConfigurationSection(key + ".ip-usage-counts")) {
-                ConfigurationSection section = cfg.getConfigurationSection(key + ".ip-usage-counts");
-                for (String ip : section.getKeys(false)) {
-                    int usage = section.getInt(ip);
-                    giftCode.ipUsageCounts.put(ip, usage);
-                }
-            }
             map.put(key, giftCode);
         }
         return map;
@@ -89,12 +81,6 @@ public class GiftCodesYml {
 
             // Items (giữ nguyên NBT)
             cfg.set(key + ".items", gc.getItemRewards());
-
-            // Ghi lại ip-usage-counts sạch sẽ
-            cfg.set(key + ".ip-usage-counts", null);
-            for (Map.Entry<String, Integer> ipEntry : gc.ipUsageCounts.entrySet()) {
-                cfg.set(key + ".ip-usage-counts." + ipEntry.getKey(), ipEntry.getValue());
-            }
         }
 
         try {
