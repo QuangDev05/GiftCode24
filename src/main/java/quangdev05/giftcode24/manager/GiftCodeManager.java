@@ -10,8 +10,7 @@ import org.bukkit.inventory.ItemStack;
 import quangdev05.giftcode24.GiftCode24;
 import quangdev05.giftcode24.model.GiftCode;
 import quangdev05.giftcode24.storage.GiftCodesYml;
-import quangdev05.giftcode24.storage.PlayerDataYml;
-import quangdev05.giftcode24.storage.IpUsageYml;
+import quangdev05.giftcode24.database.PlayerDataRepository;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -22,8 +21,7 @@ public class GiftCodeManager {
 
     private final GiftCode24 plugin;
     private final GiftCodesYml giftCodesYml;
-    private final PlayerDataYml playerDataYml;
-    private final IpUsageYml ipUsageYml;
+    private final PlayerDataRepository playerDataRepository;
     private final Map<String, GiftCode> giftCodes;
     private static final String RANDOM_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ0123456789";
     private final SecureRandom rng = new SecureRandom();
@@ -34,11 +32,10 @@ public class GiftCodeManager {
         return sb.toString();
     }
 
-    public GiftCodeManager(GiftCode24 plugin, GiftCodesYml giftCodesYml, PlayerDataYml playerDataYml, IpUsageYml ipUsageYml) {
+    public GiftCodeManager(GiftCode24 plugin, GiftCodesYml giftCodesYml, PlayerDataRepository playerDataRepository) {
         this.plugin = plugin;
         this.giftCodesYml = giftCodesYml;
-        this.playerDataYml = playerDataYml;
-        this.ipUsageYml = ipUsageYml;
+        this.playerDataRepository = playerDataRepository;
         this.giftCodes = new LinkedHashMap<>(giftCodesYml.loadAll());
     }
 
@@ -71,7 +68,7 @@ public class GiftCodeManager {
         GiftCode giftCode = new GiftCode(
                 commands, message, maxUses, expiry, enabled,
                 playerMaxUses, maxUsesPerIP, requiredPlaytime,
-                new java.util.ArrayList<org.bukkit.inventory.ItemStack>() // items mặc định rỗng
+                new java.util.ArrayList<org.bukkit.inventory.ItemStack>()
         );
         giftCodes.put(code, giftCode);
         save();
@@ -96,7 +93,6 @@ public class GiftCodeManager {
 
     public void reloadFromDisk() {
         giftCodesYml.reload();
-        playerDataYml.reload();
         this.giftCodes.clear();
         this.giftCodes.putAll(giftCodesYml.loadAll());
     }
@@ -112,24 +108,19 @@ public class GiftCodeManager {
             return;
         }
 
-        // Ghi dấu đã assign
-        playerDataYml.addAssignedCode(player.getUniqueId(), code);
+        playerDataRepository.addAssignedCode(player.getUniqueId(), code);
 
-        // Chuẩn bị dữ liệu trước khi schedule (tránh concurrent modification)
         final List<String> cmds = new ArrayList<>(gc.getCommands());
         final List<String> msgs = new ArrayList<>(gc.getMessages());
         final List<ItemStack> items = gc.getItemRewards() != null ? new ArrayList<>(gc.getItemRewards()) : Collections.emptyList();
 
-        // 1) Chạy command bằng GlobalRegionScheduler (chuẩn Folia cho console)
         Bukkit.getGlobalRegionScheduler().execute(plugin, () -> {
             for (String cmd : cmds) {
                 Bukkit.dispatchCommand(Bukkit.getConsoleSender(), cmd.replace("%player%", player.getName()));
             }
         });
 
-        // 2) Phát item + gửi tin nhắn trên thread vùng của player
         player.getScheduler().run(plugin, task -> {
-            // Phát item
             if (!items.isEmpty()) {
                 for (ItemStack it : items) {
                     if (it == null) continue;
@@ -143,14 +134,12 @@ public class GiftCodeManager {
                 }
             }
 
-            // Gửi messages
             player.sendMessage(ChatColor.GREEN + "You have been assigned a gift code by the administrator.");
             for (String msg : msgs) {
                 player.sendMessage(ChatColor.GREEN + msg);
             }
         }, null);
 
-        // 3) Phản hồi admin
         sender.sendMessage(ChatColor.GREEN + "Assigned gift code " + ChatColor.YELLOW + code
                 + ChatColor.GREEN + " to " + ChatColor.AQUA + player.getName() + ChatColor.GREEN + ".");
     }
@@ -163,7 +152,7 @@ public class GiftCodeManager {
             String code;
             int tries = 0;
             do {
-                code = base + randomSuffix(8);   // ví dụ: EVENT- + 8 ký tự
+                code = base + randomSuffix(8);
                 tries++;
             } while (giftCodes.containsKey(code) && tries < 50);
             if (giftCodes.containsKey(code)) continue;
@@ -188,18 +177,17 @@ public class GiftCodeManager {
 
     public int createRandomGiftCodesFromTemplate(String base, int amount, String templateCode) {
         GiftCode t = giftCodes.get(templateCode);
-        if (t == null) return -1; // báo không có template
+        if (t == null) return -1;
 
         int created = 0;
         if (amount <= 0) return 0;
 
-        // clone nội dung từ template
         java.util.List<String> cmds = new java.util.ArrayList<>(t.getCommands());
         java.util.List<String> msgs = new java.util.ArrayList<>(t.getMessages());
         java.util.List<ItemStack> items = new java.util.ArrayList<>();
         if (t.getItemRewards() != null) {
             for (ItemStack it : t.getItemRewards()) {
-                if (it != null) items.add(it.clone()); // giữ NBT
+                if (it != null) items.add(it.clone());
             }
         }
 
@@ -210,19 +198,18 @@ public class GiftCodeManager {
                 code = base + randomSuffix(8);
                 tries++;
             } while (giftCodes.containsKey(code) && tries < 50);
-            if (giftCodes.containsKey(code)) continue; // đụng hàng quá nhiều thì bỏ lượt này
+            if (giftCodes.containsKey(code)) continue;
 
-            // mỗi code random dùng 1 lần, các ràng buộc khác lấy từ template để đồng bộ hành vi
             GiftCode gc = new GiftCode(
                     cmds,
                     msgs,
                     99,
-                    t.getExpiry(),              // copy hạn dùng
-                    true,            // copy trạng thái enable
-                    t.getPlayerMaxUses(),       // copy limit theo người
-                    t.getMaxUsesPerIP(),        // copy limit theo IP
-                    t.getRequiredPlaytime(),    // copy yêu cầu playtime
-                    items                       // copy item rewards (clone)
+                    t.getExpiry(),
+                    true,
+                    t.getPlayerMaxUses(),
+                    t.getMaxUsesPerIP(),
+                    t.getRequiredPlaytime(),
+                    items
             );
 
             giftCodes.put(code, gc);
@@ -233,14 +220,14 @@ public class GiftCodeManager {
     }
 
     public boolean checkPlayerHasUsedCode(Player player, String code) {
-        List<String> usedCodes = playerDataYml.getUsedCodes(player.getUniqueId());
+        List<String> usedCodes = playerDataRepository.getUsedCodes(player.getUniqueId());
         int playerMaxUses = getPlayerMaxUsesForCode(code);
         if (playerMaxUses == -1) return false;
         return Collections.frequency(usedCodes, code) >= playerMaxUses;
     }
 
     public void addPlayerUsedCode(Player player, String code) {
-        playerDataYml.addUsedCode(player, code);
+        playerDataRepository.addUsedCode(player, code);
     }
 
     public int getPlayerMaxUsesForCode(String code) {
@@ -251,12 +238,10 @@ public class GiftCodeManager {
     }
 
     public int calculateUsedCount(String code) {
+        Map<UUID, PlayerDataRepository.PlayerData> allData = playerDataRepository.getAllPlayerData();
         int count = 0;
-        if (playerDataYml.getPlayersSection() != null) {
-            for (String key : playerDataYml.getPlayersSection().getKeys(false)) {
-                List<String> usedCodes = playerDataYml.getPlayersSection().getStringList(key + ".usedCodes");
-                count += Collections.frequency(usedCodes, code);
-            }
+        for (PlayerDataRepository.PlayerData data : allData.values()) {
+            count += Collections.frequency(data.getUsedCodes(), code);
         }
         return count;
     }
@@ -303,8 +288,14 @@ public class GiftCodeManager {
 
         if (giftCode.getMaxUsesPerIP() > 0) {
             String playerIP = player.getAddress().getAddress().getHostAddress();
-            // Sử dụng ipUsageYml thay vì cache trong GiftCode
-            int ipUsageCount = ipUsageYml.getIpUsageCount(code, playerIP);
+            int ipUsageCount = 0;
+            Map<UUID, PlayerDataRepository.PlayerData> allData = playerDataRepository.getAllPlayerData();
+            for (PlayerDataRepository.PlayerData data : allData.values()) {
+                if (playerIP.equals(data.getIp())) {
+                    ipUsageCount += Collections.frequency(data.getUsedCodes(), code);
+                }
+            }
+
             if (ipUsageCount >= giftCode.getMaxUsesPerIP()) {
                 return ChatColor.RED + plugin.getConfig().getString("messages.max-uses-perip", "This gift code has been used more times than allowed from your IP address.");
             }
@@ -314,25 +305,17 @@ public class GiftCodeManager {
             return ChatColor.RED + plugin.getConfig().getString("messages.code-already-redeemed", "You have entered this code more than the specified number of times.");
         }
 
-        // --- Chuẩn bị dữ liệu (tránh sửa list gốc hoặc đụng thread-safety) ---
         final List<String> cmds = new ArrayList<>(giftCode.getCommands());
         final List<String> msgs = new ArrayList<>(giftCode.getMessages());
         final List<ItemStack> items = giftCode.getItemRewards() != null ? new ArrayList<>(giftCode.getItemRewards()) : Collections.emptyList();
 
-        // 1) Chạy command console trên Global thread (Folia bắt buộc)
         Bukkit.getGlobalRegionScheduler().execute(plugin, () -> {
             for (String cmd : cmds) {
                 Bukkit.dispatchCommand(Bukkit.getConsoleSender(), cmd.replace("%player%", player.getName()));
             }
         });
 
-        // 2) Phát item + gửi tin nhắn + cập nhật save trên thread vùng của player
         player.getScheduler().run(plugin, task -> {
-            if (giftCode.getMaxUsesPerIP() > 0) {
-                String playerIP = player.getAddress().getAddress().getHostAddress();
-                ipUsageYml.incrementIpUsage(code, playerIP);
-            }
-            // Phát item
             if (!items.isEmpty()) {
                 for (ItemStack it : items) {
                     if (it == null) continue;
@@ -346,19 +329,15 @@ public class GiftCodeManager {
                 }
             }
 
-            // Gửi messages
             for (String msg : msgs) {
                 player.sendMessage(ChatColor.GREEN + msg);
             }
 
-            // Update đếm dùng, giảm maxUses và lưu
             giftCode.setMaxUses(giftCode.getMaxUses() - 1);
             addPlayerUsedCode(player, code);
-            save(); // ghi YAML; nếu muốn không block thì chuyển sang AsyncScheduler
-            ipUsageYml.saveAll();
+            save();
         }, null);
 
-        // 3) Trả thông điệp thành công ngay cho người gọi lệnh
         return ChatColor.GREEN + plugin.getConfig().getString("messages.code-redeemed", "You have successfully redeemed your gift code!");
     }
 }

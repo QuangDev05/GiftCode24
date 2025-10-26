@@ -70,7 +70,6 @@ public class GiftCodeAdminCommand implements CommandExecutor, TabCompleter {
                 if (args.length >= 2) {
                     String baseOrCode = args[1];
 
-                    // parse flags linh hoạt: -r [amount], -c <template>, -g
                     boolean flagRandom = false;
                     int amount = 10;
                     String template = null;
@@ -91,7 +90,6 @@ public class GiftCodeAdminCommand implements CommandExecutor, TabCompleter {
                         }
                     }
 
-                    // RANDOM mode
                     if (flagRandom) {
                         if (template != null) {
                             int made = manager.createRandomGiftCodesFromTemplate(baseOrCode, amount, template);
@@ -110,7 +108,6 @@ public class GiftCodeAdminCommand implements CommandExecutor, TabCompleter {
                         break;
                     }
 
-                    // Tạo 1 code: -g (mở GUI) hoặc tạo thường
                     if (manager.exists(baseOrCode)) {
                         sender.sendMessage(ChatColor.RED + "The gift code \"" + ChatColor.YELLOW + baseOrCode + ChatColor.RED + "\" already exists. Please create a different code.");
                         break;
@@ -172,7 +169,7 @@ public class GiftCodeAdminCommand implements CommandExecutor, TabCompleter {
                 String perm = args[2];
                 if ("none".equalsIgnoreCase(perm) || "null".equalsIgnoreCase(perm) || "-".equals(perm)) perm = "";
                 gc.setPermission(perm);
-                manager.save(); // hoặc gọi saveGiftCodes() tương đương
+                manager.save();
                 sender.sendMessage(ChatColor.GREEN + "Permission for " + ChatColor.YELLOW + code + ChatColor.GREEN + " set to "
                         + (perm.isEmpty() ? ChatColor.AQUA + "none" : ChatColor.AQUA + perm) + ChatColor.GREEN + ".");
             }
@@ -224,7 +221,6 @@ public class GiftCodeAdminCommand implements CommandExecutor, TabCompleter {
                 if (sender instanceof Player) {
                     gui.open((Player) sender, 0);
                 } else {
-                    // console: in danh sách chi tiết
                     java.util.List<String> codes = manager.listGiftCodes();
                     sender.sendMessage(ChatColor.GOLD + "Gift code list (" + codes.size() + "):");
 
@@ -262,7 +258,6 @@ public class GiftCodeAdminCommand implements CommandExecutor, TabCompleter {
 
                 org.bukkit.entity.Player target = plugin.getServer().getPlayerExact(targetName);
                 if (target == null) {
-                    // ONLINE-only: offline thì báo không tồn tại/đang offline
                     sender.sendMessage(ChatColor.RED + "Player not found or offline.");
                     break;
                 }
@@ -271,7 +266,6 @@ public class GiftCodeAdminCommand implements CommandExecutor, TabCompleter {
                 break;
 
             default:
-                // Xử lý lệnh không hợp lệ
                 sender.sendMessage(ChatColor.RED + "Unknown command: " + ChatColor.YELLOW + args[0]);
                 sender.sendMessage(ChatColor.GOLD + "Use " + ChatColor.YELLOW + "/giftcode help" + ChatColor.GOLD + " for command list");
                 break;
@@ -281,13 +275,11 @@ public class GiftCodeAdminCommand implements CommandExecutor, TabCompleter {
 
     @Override
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
-        // helper filter
         java.util.function.BiFunction<List<String>, String, List<String>> pick = (opts, pref) -> {
             String p = pref == null ? "" : pref.toLowerCase();
             return opts.stream().filter(s -> s.toLowerCase().startsWith(p)).collect(Collectors.toList());
         };
 
-        // subcommands
         List<String> subs = Arrays.asList("help","create","del","reload","enable","disable","list","assign","setperm","guie");
 
         if (args.length == 1) {
@@ -297,17 +289,14 @@ public class GiftCodeAdminCommand implements CommandExecutor, TabCompleter {
         String sub = args[0].toLowerCase();
         switch (sub) {
             case "create": {
-                // /gc create <base|code> [-r [amount]] [-c <template>] [-g]
                 if (args.length == 2) {
-                    return Collections.emptyList(); // để người dùng tự gõ base/code
+                    return Collections.emptyList();
                 }
-                // gợi ý flag ở các vị trí sau
                 if (args.length >= 3) {
                     List<String> flags = new ArrayList<>();
                     if (!Arrays.asList(args).contains("-r")) flags.add("-r");
                     if (!Arrays.asList(args).contains("-c")) flags.add("-c");
                     if (!Arrays.asList(args).contains("-g")) flags.add("-g");
-                    // nếu vị trí hiện tại đang là flag thì gợi ý tiếp theo
                     if ("-r".equalsIgnoreCase(args[2])) {
                         if (args.length == 3) return Arrays.asList("10","20","50","100");
                         if (args.length == 4 && ("-c".equalsIgnoreCase(args[3]) || "-g".equalsIgnoreCase(args[3])))
@@ -315,7 +304,6 @@ public class GiftCodeAdminCommand implements CommandExecutor, TabCompleter {
                     }
                     if ("-c".equalsIgnoreCase(args[2])) {
                         if (args.length == 3 || (args.length == 5 && "-c".equalsIgnoreCase(args[4]))) {
-                            // gợi ý template = danh sách code hiện có
                             return pick.apply(manager.listGiftCodes(), args[args.length-1]);
                         }
                     }
@@ -334,10 +322,10 @@ public class GiftCodeAdminCommand implements CommandExecutor, TabCompleter {
             }
             case "assign": {
                 if (args.length == 2) {
-                    return pick.apply(manager.listGiftCodes(), args[1]); // gợi ý mã
+                    return pick.apply(manager.listGiftCodes(), args[1]);
                 } else if (args.length == 3) {
                     List<String> names = Bukkit.getOnlinePlayers().stream().map(Player::getName).collect(Collectors.toList());
-                    return pick.apply(names, args[2]); // gợi ý người chơi online
+                    return pick.apply(names, args[2]);
                 }
                 return Collections.emptyList();
             }

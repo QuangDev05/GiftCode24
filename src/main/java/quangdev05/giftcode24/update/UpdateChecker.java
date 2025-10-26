@@ -11,7 +11,7 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.util.*; // Set, UUID, Collections
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
@@ -24,10 +24,9 @@ public class UpdateChecker implements Listener {
     private final JavaPlugin plugin;
     private final AsyncScheduler asyncScheduler = Bukkit.getAsyncScheduler();
 
-    // Người chơi đã được báo trong lần chạy server này (tránh spam)
     private final Set<UUID> notifiedOnce = Collections.newSetFromMap(new ConcurrentHashMap<>());
 
-    private boolean consoleReminderStarted = false; // chỉ tạo timer 1 lần
+    private boolean consoleReminderStarted = false;
     private ScheduledTask reminderTask;
 
     public UpdateChecker(JavaPlugin plugin) {
@@ -65,14 +64,12 @@ public class UpdateChecker implements Listener {
                     if (latest != null && plugin instanceof GiftCode24 gc) {
                         gc.setLatestVersion(latest);
 
-                        // Log 1 phát ngay khi fetch được
                         String current = plugin.getDescription().getVersion();
                         if (!latest.equals(current)) {
                             plugin.getLogger().info("Update available: v" + latest +
                                     " (current v" + current + ")");
                         }
 
-                        // Khởi động nhắc console định kỳ (chỉ 1 lần)
                         startConsoleReminder();
                     }
                 }
@@ -80,12 +77,11 @@ public class UpdateChecker implements Listener {
         });
     }
 
-    // Nhắc console mỗi 9 phút nếu có bản mới (chạy bằng AsyncScheduler)
     private void startConsoleReminder() {
         if (consoleReminderStarted) return;
         consoleReminderStarted = true;
 
-        final long PERIOD_MS = 9L * 60L * 1000L; // 9 phút
+        final long PERIOD_MS = 9L * 60L * 1000L;
 
         reminderTask = asyncScheduler.runAtFixedRate(
                 plugin,
@@ -100,13 +96,12 @@ public class UpdateChecker implements Listener {
                                 " (current v" + current + ")");
                     }
                 },
-                PERIOD_MS, // initial delay
-                PERIOD_MS, // period
+                PERIOD_MS,
+                PERIOD_MS,
                 TimeUnit.MILLISECONDS
         );
     }
 
-    // Báo 1 lần cho từng admin khi họ join (nếu có bản mới)
     @EventHandler
     public void onAdminJoin(PlayerJoinEvent e) {
         if (!(plugin instanceof GiftCode24 gc)) return;
@@ -126,7 +121,6 @@ public class UpdateChecker implements Listener {
                 + " (current " + ChatColor.GRAY + "v" + current + ChatColor.YELLOW + ").");
     }
 
-    // Gọi trong onDisable() của plugin để hủy task
     public void cancelTasks() {
         if (reminderTask != null) {
             reminderTask.cancel();

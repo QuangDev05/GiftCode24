@@ -54,7 +54,7 @@ public class GiftItemEditorGUI implements Listener {
 
         Player player = (Player) e.getPlayer();
         String code = ChatColor.stripColor(title).replace("Edit items for ", "");
-        Inventory inv = e.getInventory(); // giữ tham chiếu để xử lý trong region task
+        Inventory inv = e.getInventory();
 
         Bukkit.getRegionScheduler().run(plugin, player.getLocation(), task -> {
             List<ItemStack> items = new ArrayList<>();

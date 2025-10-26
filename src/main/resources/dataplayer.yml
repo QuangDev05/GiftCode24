@@ -1,9 +1,0 @@
-# Player data file.
-# Example data:
-players:
-  59daa05c-3d1e-425c-8428-67606beaff0e:
-    ip: 121.22.153.71
-    usedCodes:
-      - samplecode
-      - samplecode2
-      - samplecode3

@@ -4,15 +4,25 @@
 # ██║   ██║██║██╔══╝     ██║   ██║     ██║   ██║██║  ██║██╔══╝  ██╔═══╝ ╚════██║
 # ╚██████╔╝██║██║        ██║   ╚██████╗╚██████╔╝██████╔╝███████╗███████╗     ██║
 #  ╚═════╝ ╚═╝╚═╝        ╚═╝    ╚═════╝ ╚═════╝ ╚═════╝ ╚══════╝╚══════╝     ╚═╝
-# Plugin made by QuangDev05.
-# Plugin made in Vietnam.
+# Plugin made by QuangDev05
+# Plugin made in Vietnam
 # Facebook: https://www.facebook.com/quangdev05
-# Discord: quangdev05.
+# Discord: quangdev05
 # Discord Community: https://discord.gg/4SGhHNmhE8
 # Github: https://github.com/QuangDev05/
 
 # Configure update check
 check-update: true # false to disable
+
+# Database Configuration
+database:
+  type: "H2" # H2 or MYSQL
+  mysql:
+    host: "localhost"
+    port: 3306
+    database: "giftcode24"
+    username: "root"
+    password: ""
 
 messages:
   invalid-code: "The gift code you entered is invalid."

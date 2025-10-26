@@ -8,18 +8,18 @@ import org.bukkit.entity.Player;
 
 import quangdev05.giftcode24.GiftCode24;
 import quangdev05.giftcode24.manager.GiftCodeManager;
-import quangdev05.giftcode24.storage.PlayerDataYml;
+import quangdev05.giftcode24.database.PlayerDataRepository;
 
 public class RedeemCodeCommand implements CommandExecutor {
 
     private final GiftCode24 plugin;
     private final GiftCodeManager manager;
-    private final PlayerDataYml playerData;
+    private final PlayerDataRepository playerDataRepository;
 
-    public RedeemCodeCommand(GiftCode24 plugin, GiftCodeManager manager, PlayerDataYml playerData) {
+    public RedeemCodeCommand(GiftCode24 plugin, GiftCodeManager manager, PlayerDataRepository playerDataRepository) {
         this.plugin = plugin;
         this.manager = manager;
-        this.playerData = playerData;
+        this.playerDataRepository = playerDataRepository;
     }
 
     @Override

@@ -20,10 +20,10 @@ import java.util.*;
 
 public class GiftCodeListGUI implements Listener {
 
-    private static final int ITEMS_PER_PAGE = 45; // 5 rows
-    private static final int PREV_BUTTON_SLOT = 45; // Last row first slot
-    private static final int NEXT_BUTTON_SLOT = 53; // Last row last slot
-    private static final int PAGE_INFO_SLOT = 49;   // Middle of the last row
+    private static final int ITEMS_PER_PAGE = 45;
+    private static final int PREV_BUTTON_SLOT = 45;
+    private static final int NEXT_BUTTON_SLOT = 53;
+    private static final int PAGE_INFO_SLOT = 49;
 
     private final GiftCodeManager manager;
 
@@ -47,7 +47,6 @@ public class GiftCodeListGUI implements Listener {
         ItemMeta meta = item.getItemMeta();
         meta.setDisplayName(ChatColor.AQUA + code);
         List<String> lore = new ArrayList<>();
-        // Bỏ hiển thị Commands và Message theo yêu cầu
         lore.add(ChatColor.YELLOW + "Max Uses: " + ChatColor.WHITE + giftCode.getMaxUses());
         lore.add(ChatColor.YELLOW + "Expiry: " + ChatColor.WHITE + (giftCode.getExpiry().isEmpty() ? "None" : giftCode.getExpiry()));
         lore.add(ChatColor.YELLOW + "Enabled: " + ChatColor.WHITE + (giftCode.isEnabled() ? "Yes" : "No"));
@@ -98,24 +97,21 @@ public class GiftCodeListGUI implements Listener {
             inv.addItem(createGiftCodeItem(code, gc));
         }
 
-        // Luôn hiển thị thông tin số trang
         inv.setItem(PAGE_INFO_SLOT, createPageInfoItem(page, totalPages));
 
-        // Ẩn/hiện nút theo số trang & vị trí hiện tại
         if (totalPages > 1) {
             if (page > 0) {
                 inv.setItem(PREV_BUTTON_SLOT, createNavigationButton("Previous Page", Material.ARROW, "Click to go back"));
             } else {
-                inv.setItem(PREV_BUTTON_SLOT, null); // ẩn
+                inv.setItem(PREV_BUTTON_SLOT, null);
             }
 
             if (page < totalPages - 1) {
                 inv.setItem(NEXT_BUTTON_SLOT, createNavigationButton("Next Page", Material.ARROW, "Click to go forward"));
             } else {
-                inv.setItem(NEXT_BUTTON_SLOT, null); // ẩn
+                inv.setItem(NEXT_BUTTON_SLOT, null);
             }
         } else {
-            // Chỉ 1 trang: ẩn cả 2 nút
             inv.setItem(PREV_BUTTON_SLOT, null);
             inv.setItem(NEXT_BUTTON_SLOT, null);
         }
@@ -152,7 +148,6 @@ public class GiftCodeListGUI implements Listener {
             int totalPages = (int) Math.ceil((double) totalGiftCodes / ITEMS_PER_PAGE);
             if (totalPages <= 0) totalPages = 1;
 
-            // Xử lý điều hướng chỉ khi nút có hiển thị (được đặt trong inventory)
             if (event.getSlot() == PREV_BUTTON_SLOT && event.getInventory().getItem(PREV_BUTTON_SLOT) != null && currentPage > 0) {
                 player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1.0f, 1.0f);
                 open(player, currentPage - 1);

@@ -4,6 +4,8 @@ import java.util.*;
 import org.bukkit.inventory.ItemStack;
 
 public class GiftCode {
+    public Map<String, Integer> ipUsageCounts = new HashMap<>();
+
     private int maxUsesPerIP;
     private List<String> commands;
     private List<String> messages;
